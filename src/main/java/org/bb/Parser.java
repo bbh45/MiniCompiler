@@ -5,7 +5,7 @@ import java.util.*;
 public class Parser {
 
     //parses - assignment(a=10), print(print a), assignment+expression(a=b+c)
-
+    private int lineNo;
     private Token returnedToken;
     private Iterator<Token> tokenFeed;
     private Stack<Token> stack;
@@ -13,6 +13,7 @@ public class Parser {
     private Map<String,Integer> precedence;
 
     public Parser(List<Token> tokens){
+        this.lineNo = 1;
         this.returnedToken = null;
         this.tokenFeed = tokens.iterator();
         this.stack = new Stack<>();
@@ -40,6 +41,7 @@ public class Parser {
         return true;
     }
 
+
     private boolean parseStatement(){
         if(!parsePrintStatement() && !parseAssignment()){
             raiseError("Expected: print statement or assignment");
@@ -48,6 +50,7 @@ public class Parser {
         if(!token.value.equals("\n")){
             raiseError("Expected: end of line");
         }
+        lineNo++;
         return true;
     }
 
@@ -174,6 +177,6 @@ public class Parser {
     }
 
     private void raiseError(String message) {
-        throw new IllegalArgumentException(message);
+        throw new IllegalArgumentException("at line"+lineNo + " - " + message);
     }
 }
