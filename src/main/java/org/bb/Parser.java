@@ -27,9 +27,6 @@ public class Parser {
 
     //parse entire program statement by statement
     public boolean parseProgram(){
-        if(!parseStatement()){
-            raiseError("Expected: statement");
-        }
         Token token = nextToken();
         while (token != null) {
             returnToken(token);
@@ -47,7 +44,7 @@ public class Parser {
             raiseError("Expected: print statement or assignment");
         }
         Token token = nextToken();
-        if(!token.value.equals("\n")){
+        if(!token.value.equals("\n")){ //checking for end of statement
             raiseError("Expected: end of line");
         }
         lineNo++;
@@ -63,12 +60,12 @@ public class Parser {
         if(!parseExpression()){
             raiseError("Expected: expression");
         }
-        int value = stackCollapse();
+        int value = stackCollapse(); //running stackCollapse() on the parsed expression to evaluate the final result of expression
         System.out.println(value);
         return true;
     }
 
-    private boolean parseAssignment(){
+    private boolean parseAssignment(){  //a = b + c or a = b + 4 or a = 4
         Token token = nextToken();
         if(!token.type.equals("identifier")){
             returnToken(token);
@@ -79,41 +76,54 @@ public class Parser {
         if(!token.value.equals("=")){
             raiseError("Expected =");
         }
-        if(!parseExpression()){
+        if(!parseExpression()){      //checks and parses if there is an expression or number after the  "="
             raiseError("Expected expression");
         }
+        //running stackCollapse() on the parsed expression to evaluate the final result of expression
+        //storing the left identifier value and expression result into th vars Map eg:(a,4)
         vars.put(identifier, stackCollapse());
         return true;
     }
 
-    private boolean parseExpression(){ //checks expression part of print statement : a+b
-        if(!parseValue()){             //parses first value
+    //To parse the expression, all the identifiers present in the expression must have already been parsed and
+    //their value should be present in the vars map
+    private boolean parseExpression(){ //eg a+b
+        if(!parseValue()){        //checks if the first value is already parsed(a) => present in vars map and push into stack to be used by stackCollapse()
             return false;
         }
-        if(parseOperator()){          //checks if there is a operator
+        if(parseOperator()){      //checks if there is an operator, if yes, push it into stack to be used by stackCollapse() and recursively call parseExpression(b)
             parseExpression();
         }
         return true;
     }
 
+    //visit each identifier/number and push its value into stack to be used by stackCollapse()
     private boolean parseValue(){
         Token token = nextToken();
+        //if it is not a number or identifier, return token and return false
         if(!token.type.equals("number") && !token.type.equals("identifier")){
             returnToken(token);
             return false;
         }
+        //if it is an identifier, which is already parsed, it's value will be in the vars map
+        //get the value and push it into stack
         if(token.type.equals("identifier")){
             if(!vars.containsKey(token.value)){
                 raiseError("Syntax Error: Unknown variable "+token.value);
             }else {
                 stack.push(new Token("digit",String.valueOf(vars.get(token.value))));
             }
-        }else {
+        }//if it is number, push its value into stack
+        else {
             stack.push(new Token("digit",String.valueOf(token.value)));
         }
         return true;
     }
 
+    //each time an operator is encountered, call stackCollapse() to evaluate if previous operator had more precedence
+    //eg: if stack has - 4,*[2],5, now + is encountered, calling stackCollapse(1) will evaluate 4*5 and returns 20
+    //20 is pushed into stack
+    //then +[1] is added to stack. Now stack will have - 20,+[1]
     private boolean parseOperator(){
         Token token = nextToken();
         if(!token.type.equals("operator")){
@@ -129,10 +139,13 @@ public class Parser {
         return true;
     }
 
+    //To finally evaluate the whole expression, when all the operators in stack has same precedence - 20, +[1], 4, -[1], 5 (evaluates from right to left)
     private int stackCollapse(){
         return stackCollapse(null);
     }
 
+
+    //to evaluate expressions based on precedence
     private int stackCollapse(String nextOperator){
         int opPrecedence = nextOperator == null ? 0 : precedence.get(nextOperator);
         while (stack.size() > 1 && (Integer.parseInt(stack.get(stack.size() - 2).value)) > opPrecedence){
